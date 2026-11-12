@@ -1,0 +1,25 @@
+/* ===== UI/UX v3 ===== */
+#ask{max-width:440px}#ask h2{margin:0 0 .4rem;font-size:1.25rem}#ask-m{margin:0 0 1.1rem;white-space:pre-line}.ask-actions{justify-content:flex-end}
+.btn.danger{background:var(--bad);border-color:var(--bad);color:#fff}
+@media(max-width:680px){.ask-actions{display:grid;grid-template-columns:1fr 1fr}.ask-actions .btn{width:100%}}
+/* Tutor: acciones principales + menú "Más" */
+.ai .ai-actions .btn.pri:first-child{background:var(--brand);color:var(--on);border-color:var(--brand)}
+.aimore summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.3rem;min-height:42px;border:1px solid var(--line);border-radius:12px;background:var(--card);font-weight:700;padding:.62rem 1rem}.aimore summary::-webkit-details-marker{display:none}.aimore[open] summary{border-color:var(--brand)}
+.aimore-menu{display:grid;gap:.4rem;margin-top:.5rem;padding:.5rem;border:1px solid var(--line);border-radius:14px;background:var(--card);box-shadow:var(--sh2)}.aimore-menu .btn{justify-content:flex-start;text-align:left}
+.ai .ai-actions .aimore[open]{grid-column:1/-1}
+@media(min-width:700px){.ai .ai-actions{align-items:flex-start}.aimore{position:relative}.aimore-menu{position:absolute;z-index:8;top:100%;left:0;min-width:250px;margin-top:.3rem}.ai .ai-actions .aimore[open]{grid-column:auto}}
+/* Examen en tablet: 1 columna + tira de preguntas; panel lateral solo ≥1200px */
+.kbd-hint{margin:.6rem 0 0;font-size:.8rem;color:var(--mut);text-align:center}.kh-t{display:none}
+@media(hover:none) and (pointer:coarse){.kh-k{display:none}.kh-t{display:inline}}
+@media(hover:none) and (min-width:900px){.kbd-hint{display:none}}
+@media(max-width:1199px){.side .pills,.side .lg{display:none}}
+@media(min-width:900px) and (max-width:1199px){.exam{grid-template-columns:minmax(0,1fr)}.strip{display:flex}.side{position:static}.side .btn{width:auto!important;margin:.5rem .5rem 0 0!important}}
+@media(min-width:1200px){.exam{grid-template-columns:minmax(0,1fr) 280px}}
+/* Lectura: texto a la izquierda, pregunta a la derecha (tablet horizontal y escritorio) */
+@media(min-width:760px){.card:has(>.txtd){display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:1.6rem;align-items:start}.card:has(>.txtd)>*{grid-column:2}.card:has(>.txtd)>.txtd{grid-column:1;grid-row:1/span 40;position:sticky;top:calc(var(--hh) + 1rem);margin:0}.card:has(>.txtd)>.txtd .txt{max-height:calc(100vh - var(--hh) - 11rem)}}
+/* Vista previa de PDF: una pregunta a la vez */
+.edstrip{display:flex}@media(min-width:900px){.edstrip{display:flex;flex-wrap:wrap}}
+.chip.warnchip{background:var(--warnbg);color:var(--warnink)}
+/* Resultados: gráfico por tema y filtros */
+.tchart{display:grid;gap:.7rem}.trow{display:grid;grid-template-columns:minmax(0,13rem) 1fr 3.2rem;gap:.8rem;align-items:center}.trow .meter{margin:0}.trow .tn{font-size:.92rem;font-weight:600}.trow .tv{text-align:right;font-variant-numeric:tabular-nums}
+@media(max-width:560px){.trow{grid-template-columns:1fr 3.2rem}.trow .tn{grid-column:1/-1}}

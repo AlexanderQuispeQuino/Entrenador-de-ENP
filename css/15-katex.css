@@ -1,0 +1,6 @@
+/* ===== v4 · fórmulas con KaTeX en toda la app ===== */
+.katex{font-size:1.08em;text-indent:0}
+.stem .katex,.opt .katex,.fb .katex{font-size:1.1em}
+.katex-display{overflow-x:auto;overflow-y:hidden;padding:.1rem 0}
+.opt span{min-width:0;overflow-wrap:anywhere}
+.fig td .katex{font-size:1em}

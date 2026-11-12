@@ -1,0 +1,9 @@
+/* ===== Tokens de tema (claro / oscuro) ===== */
+:root{--bg:#f4f6fb;--card:#fff;--ink:#0f1b33;--mut:#5b6b86;--line:#dde3ef;--brand:#1d4ed8;--on:#fff;--soft:#e8efff;--ok:#157f3b;--okbg:#e6f6ec;--bad:#b42318;--badbg:#fdecea;--warn:#f5a623;--r:14px;color-scheme:light}
+[data-theme=dark]{--bg:#0a111f;--card:#121c31;--ink:#e8eefb;--mut:#92a0bb;--line:#24324f;--brand:#6d9bff;--on:#0a111f;--soft:#182848;--ok:#4ade80;--okbg:#10301f;--bad:#ff8a80;--badbg:#3a1714;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;font:400 1rem/1.55 Inter,system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+[hidden]{display:none!important}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--brand);outline-offset:2px}

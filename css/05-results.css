@@ -1,0 +1,3 @@
+/* ===== Resultados ===== */
+.big{font-size:2.4rem;font-weight:800;letter-spacing:-.03em;line-height:1.1}
+.meter{height:10px;border-radius:9px;background:var(--line);overflow:hidden;margin:.3rem 0 .9rem}.meter i{display:block;height:100%}

@@ -1,0 +1,19 @@
+/* ===== v3.6 · respuestas de IA con el look & feel de la app de Gemini ===== */
+.aiout{white-space:normal;max-width:none;color:var(--ink);font-size:1.04rem;line-height:1.72}
+.aiout p{margin:.65rem 0;line-height:1.72}.aiout p:first-child{margin-top:0}
+.aiout ol,.aiout ul{margin:.5rem 0;padding-left:1.75rem}
+.aiout ol>li::marker{font-weight:700}.aiout ul>li::marker{color:var(--mut)}
+.aiout li{margin:.6rem 0;padding-left:.25rem;line-height:1.72}
+.aiout li>ul,.aiout li>ol{margin:.35rem 0}.aiout li>p{margin:.4rem 0}
+.aiout b,.aiout strong{font-weight:700}
+.aiout .mdh{font-size:1.2rem;margin:1.3rem 0 .4rem;font-weight:700;background:none;border:0;padding:0;display:block}
+.aiout .mdeq{margin:.75rem 0;overflow-x:auto;overflow-y:hidden;text-align:center;font-size:1.12em;padding:.1rem 0}.aiout .mdeq .katex-display{margin:0}
+.aiout .katex{font-size:1.1em}
+.aiout .mfb{font-family:"Times New Roman",Georgia,serif;font-style:italic}
+.aiout .mdt{overflow-x:auto}.aiout table{border-collapse:collapse;margin:.8rem 0;font-size:.95em}.aiout th,.aiout td{border:1px solid var(--line);padding:.45rem .7rem;text-align:left}.aiout th{background:var(--soft)}
+.aiout blockquote{margin:.6rem 0;padding:.2rem .9rem;border-left:3px solid var(--line);color:var(--mut)}
+.aiout hr{border:0;border-top:1px solid var(--line);margin:1rem 0}
+.aiout details.aians{margin-top:1rem;padding:.7rem 1rem;border:1px solid var(--line);border-radius:14px}.aiout details.aians summary{cursor:pointer;font-weight:700}
+@media(max-width:700px){.aiout{font-size:1.06rem}.aiout .mdeq{font-size:1.08em}}
+.aiout ul,.aiout ul ul{list-style:disc}.aiout .katex{font-size:1.16em}.aiout .mdeq{font-size:1.15em}
+@media(min-width:900px){.aiout:not(.is-sheet){max-width:75ch}}

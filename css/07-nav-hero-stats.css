@@ -1,0 +1,17 @@
+/* ===== Navegación, hero y estadísticas (fase 10) ===== */
+.appnav{position:fixed;left:0;right:0;bottom:0;z-index:15;display:flex;background:var(--card);border-top:1px solid var(--line);padding:.3rem .5rem calc(.3rem + env(safe-area-inset-bottom))}
+.appnav button{flex:1;border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:.1rem;padding:.4rem .2rem;border-radius:12px;color:var(--mut);font-size:.72rem;font-weight:600}
+.appnav button span{font-size:1.25rem}.appnav button.on{color:var(--brand);background:var(--soft)}
+body.hasnav main{padding-bottom:6rem}
+@media(min-width:900px){.appnav{position:sticky;top:57px;bottom:auto;max-width:1100px;margin:0 auto;border:0;background:var(--bg);justify-content:flex-start;gap:.4rem;padding:.6rem clamp(1rem,3vw,2rem) 0}
+ .appnav button{flex:none;flex-direction:row;gap:.4rem;font-size:.9rem;padding:.5rem 1rem}.appnav button span{font-size:1rem}body.hasnav main{padding-bottom:2rem}}
+.hero{background:linear-gradient(135deg,var(--brand),color-mix(in srgb,var(--brand) 55%,#7c3aed));color:var(--on);border-radius:18px;padding:1.2rem 1.3rem;margin-bottom:1rem}
+.hero small{opacity:.85;font-weight:700;letter-spacing:.06em}.hero h2{margin:.2rem 0;color:inherit;font-size:1.4rem}.hero p{margin:.2rem 0 .9rem;opacity:.95}
+.hero .btn{background:var(--on);color:var(--brand);border-color:transparent}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:.7rem}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:.8rem;text-align:center}.stat b{display:block;font-size:1.5rem;letter-spacing:-.02em}.stat span{color:var(--mut);font-size:.8rem}
+@media(max-width:520px){.stats{grid-template-columns:repeat(4,1fr);gap:.4rem}.stat{padding:.6rem .2rem}.stat b{font-size:1.15rem}.stat span{font-size:.7rem}}
+.btn.sm{padding:.2rem .65rem;font-size:.85rem}
+.spark{display:flex;align-items:flex-end;gap:4px;height:70px}.spark i{flex:1;background:var(--brand);border-radius:4px 4px 0 0;min-height:4px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:5.5rem;max-width:min(92vw,460px);background:var(--ink);color:var(--bg);padding:.7rem 1rem;border-radius:12px;z-index:40;font-size:.9rem;box-shadow:0 6px 24px #0005}
+summary{cursor:pointer;font-weight:600}

@@ -1,0 +1,26 @@
+"use strict";
+const TIPS = {
+ 'Números y aproximación':'Mira la cifra siguiente a la que redondeas: ≥ 5 sube, < 5 se mantiene.',
+ 'Potencias y notación científica':'Al dividir potencias de 10 se restan exponentes. En notación científica el factor va entre 1 y 10.',
+ 'Ecuaciones':'Ordena a la forma ax² + bx + c = 0 y factoriza; en sistemas, sustituye y comprueba en ambas ecuaciones.',
+ 'Porcentajes e interés':'Convierte el % a decimal. Los descuentos sucesivos se multiplican (0,6 × 0,9), no se suman.',
+ 'Sucesiones y patrones':'Busca la regla (¿se duplica? ¿suma constante?) con las 3 primeras figuras y generaliza.',
+ 'Geometría: cuadriláteros':'Memoriza propiedades de diagonales: iguales en rectángulo e isósceles; perpendiculares en rombo.',
+ 'Probabilidad y conteo':'Cuenta el total (2ⁿ en monedas) y usa el complemento: "al menos uno" = total − ninguno.',
+ 'Funciones':'Identifica la parte fija y la variable (y = fijo + tasa·x). Evalúa un punto para descartar opciones.',
+ 'Razones, proporciones y rapidez':'Unifica unidades antes de comparar. Rapidez = distancia ÷ tiempo; una parte nunca excede el total.',
+ 'Inecuaciones e intervalos':'Dibuja la recta numérica. Al multiplicar por un negativo se invierte el signo. Corchete incluye; paréntesis no.',
+ 'Trigonometría':'Dibuja el triángulo, define la incógnita y no olvides sumar la altura del instrumento.',
+ 'Geometría: triángulos y circunferencia':'Comprueba si es rectángulo (Pitágoras). Circuncentro de un rectángulo = punto medio de la hipotenusa.',
+ 'Geometría: volúmenes':'Iguala fórmulas y simplifica lo común (πr²). Revisa unidades.',
+ 'Estadística y tablas':'Promedio = Σ(valor × frecuencia) ÷ total. Lee títulos y unidades de la tabla.',
+ 'Comprensión literal':'Vuelve al texto y ubica la frase exacta: la respuesta literal está escrita, no se deduce. Desconfía de opciones con «siempre», «todos» o «nunca».',
+ 'Idea principal':'Pregúntate de qué trata todo el texto o párrafo. La idea principal abarca los detalles; una opción que habla de un solo ejemplo es demasiado pequeña.',
+ 'Propósito del texto':'Mira los verbos del texto (recomienda, describe, informa, convence) y qué hace el autor en conjunto.',
+ 'Inferencias y conclusiones':'Una conclusión sale de lo que dice el texto sin añadir datos ni exagerar. Descarta las opciones absolutas.',
+ 'Argumentación y fuentes':'Identifica la tesis y qué la apoya: datos, citas de expertos o ejemplos. Un argumento es débil si su premisa es discutible.',
+ 'Textos discontinuos (infografía)':'Lee título, leyendas y tablas antes de las preguntas y relaciona cada dato con su bloque.',
+ 'Recursos y sentido figurado':'Distingue sentido literal de figurado y pregunta qué función cumple la expresión (comparar, resaltar, ironizar).',
+ 'Estructura y cohesión del texto':'Cada párrafo cumple una función (introducir, desarrollar, concluir). Ubica a qué idea previa responde.',
+ 'General':'Subraya datos, plantea la operación y comprueba con las alternativas.'
+};

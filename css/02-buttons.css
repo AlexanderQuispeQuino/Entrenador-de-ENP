@@ -1,0 +1,8 @@
+/* ===== Botones ===== */
+.btn{border:1px solid var(--line);background:var(--card);padding:.55rem 1rem;border-radius:10px;font-weight:600}
+.btn:hover{border-color:var(--brand)}
+.btn.pri{background:var(--brand);color:var(--on);border-color:var(--brand)}
+.btn:disabled{opacity:.4;cursor:default}
+.chip{padding:.3rem .7rem;border-radius:99px;background:var(--soft);font-weight:700;font-variant-numeric:tabular-nums}
+.chip.low{background:var(--bad);color:#fff;animation:pulse 1s infinite alternate!important}
+@keyframes pulse{to{opacity:.55}}

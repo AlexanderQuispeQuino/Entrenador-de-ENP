@@ -1,0 +1,32 @@
+/* ===== v3.1 · correcciones tras revisar capturas reales ===== */
+main{max-width:1180px}
+@media(min-width:900px){.appnav{background:transparent;backdrop-filter:none;padding-inline:clamp(1rem,3.2vw,2.25rem)}}
+.opt.ok::after,.opt.no::after{white-space:nowrap;font-size:.85rem}
+@media(max-width:560px){.opt.ok::after{content:"✓"}.opt.no::after{content:"✕"}.opt.ok::after,.opt.no::after{font-size:1.1rem;padding-left:.2rem}
+ .spk{width:38px;background:transparent;border-color:transparent;color:var(--mut)}
+ .say{gap:.3rem}.say .chip-b{padding:.3rem .65rem;font-size:.82rem}}
+.nav{background:linear-gradient(transparent,color-mix(in srgb,var(--bg) 92%,transparent) 28%,var(--bg))}
+.stat span{display:block;line-height:1.25;min-height:2.5em}
+@media(min-width:700px){.card.ed:has(#pdate){grid-template-columns:1fr 1fr}.card.ed:has(#pdate)>p,.card.ed:has(#pdate)>button{grid-column:1/-1}.card.ed:has(#pdate)>button{justify-self:start}}
+/* Resultados compactos en móvil */
+@media(max-width:680px){#v-res h1+.grid.cols{grid-template-columns:1fr 1fr}#v-res h1+.grid.cols>.card:first-child{grid-column:1/-1}#v-res h1+.grid.cols>.card{padding:.9rem 1rem}
+ .trow{grid-template-columns:1fr auto;gap:.15rem .6rem}.trow .tn{grid-column:1;grid-row:1}.trow .tv{grid-column:2;grid-row:1}.trow .meter{grid-column:1/-1;grid-row:2;height:8px}.tchart{gap:.6rem}}
+
+/* ===== v3.2 · revisión completa ===== */
+.spark{justify-content:flex-end}.spark i{flex:1 1 0;max-width:56px}
+label.row:has(>input[type=checkbox]){flex-wrap:nowrap;align-items:flex-start;gap:.6rem}label.row>input[type=checkbox]{margin-top:.15rem}
+@media(max-width:700px){.row.conf>:first-child{flex:1 0 100%}}
+@media(min-width:900px){.card.ed:has([data-f=o0]){grid-template-columns:1fr 1fr;column-gap:1rem}.card.ed:has([data-f=o0])>*{grid-column:1/-1}.card.ed:has([data-f=o0])>label:has([data-f^=o]){grid-column:auto}}
+@media(hover:hover){.pill{height:38px}.pills{grid-template-columns:repeat(auto-fill,minmax(38px,1fr))}}
+.side{max-height:calc(100vh - var(--hh) - 5rem);overflow:auto;overscroll-behavior:contain}
+@media(min-width:1200px){header{padding-inline:max(clamp(1rem,4vw,2.5rem),calc((100vw - 1180px)/2 + 2.25rem))}}
+
+/* ===== v3.3 · a partir de capturas reales del celular ===== */
+.fb .card,.ai .card{box-shadow:none;background:var(--card);border:1px solid var(--line)}
+.fb .fb{background:transparent;border-left-width:3px;padding:.8rem .9rem;margin-top:.8rem}
+.fb .card .stem{font-size:1.02rem;line-height:1.6}
+.aiout .aisec.step .aihead{min-height:1.9rem}
+@media(max-width:680px){.card{padding:1rem}.fb{padding:.85rem .9rem}.fb .card{padding:.8rem;margin-inline:-.25rem}.fb .opt{padding:.65rem .75rem}.aiout .aisec.step{margin-left:.8rem;padding-left:1.2rem}.stem{line-height:1.6}}
+
+.fb .card .fb{border-left:0;padding:.7rem 0 0;border-top:1px solid var(--line);border-radius:0}
+.fb .aiout+.row{margin-top:1rem}

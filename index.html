@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1d4ed8">
+<link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.11/fonts/KaTeX_Main-Regular.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.11/fonts/KaTeX_Math-Italic.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.11/fonts/KaTeX_Main-Italic.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.11/fonts/KaTeX_Main-Bold.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.11/fonts/KaTeX_Size1-Regular.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.11/katex.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.11/katex.min.js"></script>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Entrenador ENP">
+<title>Entrenador ENP · Beca 18</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<link rel="stylesheet" href="css/00-tokens.css">
+<link rel="stylesheet" href="css/01-layout.css">
+<link rel="stylesheet" href="css/02-buttons.css">
+<link rel="stylesheet" href="css/03-home.css">
+<link rel="stylesheet" href="css/04-exam.css">
+<link rel="stylesheet" href="css/05-results.css">
+<link rel="stylesheet" href="css/06-tutor-ai.css">
+<link rel="stylesheet" href="css/07-nav-hero-stats.css">
+<link rel="stylesheet" href="css/08-responsive-refinement.css">
+<link rel="stylesheet" href="css/09-design-system.css">
+<link rel="stylesheet" href="css/10-dialogs-tutor-menu.css">
+<link rel="stylesheet" href="css/11-device-fixes.css">
+<link rel="stylesheet" href="css/12-bottom-sheet.css">
+<link rel="stylesheet" href="css/13-tutor-actions.css">
+<link rel="stylesheet" href="css/14-ai-markdown.css">
+<link rel="stylesheet" href="css/15-katex.css">
+<link rel="stylesheet" href="css/16-ai-callouts.css">
+<link rel="stylesheet" href="css/17-appnav-solid.css">
+<link rel="stylesheet" href="css/18-figures-zoom.css">
+
+</head>
+<body>
+<a class="skip" href="#main">Saltar al contenido</a>
+<header>
+  <b>🎓 <span class="hide-s">Entrenador </span>ENP<span class="hide-s"> · Beca 18</span></b>
+  <div class="row">
+    <span id="clock" class="chip" role="timer" aria-label="Tiempo restante del simulacro" hidden>120:00</span>
+    <button class="btn" data-a="who" id="whoBtn" aria-label="Cambiar de persona">👤</button>
+    <button class="btn" data-a="gohome" aria-label="Ir al inicio">🏠</button>
+    <button class="btn" data-a="cfg" aria-label="Configurar IA">⚙<span class="hide-s"> IA</span></button>
+    <button class="btn" data-a="theme" id="themeBtn" aria-label="Cambiar tema">🌙</button>
+  </div>
+</header>
+<nav id="nav" class="appnav" aria-label="Secciones">
+  <button data-a="tab" data-v="hoy"><span>🏠</span>Hoy</button>
+  <button data-a="tab" data-v="ex"><span>📝</span>Exámenes</button>
+  <button data-a="tab" data-v="ap"><span>📚</span>Aprender</button>
+  <button data-a="tab" data-v="pr"><span>📈</span>Progreso</button>
+</nav>
+<main id="main" tabindex="-1">
+  <!-- Vista 1: inicio -->
+  <section id="v-home" class="view">
+    <!-- HOY: siguiente paso, estadísticas y plan -->
+    <div id="t-hoy" class="tab"><div id="x-hoy"></div></div>
+    <!-- EXÁMENES: banco, importar PDF -->
+    <div id="t-ex" class="tab" hidden>
+      <h1>Exámenes</h1>
+      <p class="mut">Practica con exámenes reales completos. Todo corre en tu navegador.</p>
+      <div class="grid cols" id="bank"></div>
+      <h2>Importar un PDF</h2>
+      <label class="drop" id="drop"><b>Arrastra el PDF aquí o toca para elegir</b><br><span class="mut">Examen y solucionario pueden ir en archivos separados</span>
+        <input id="file" type="file" accept="application/pdf" multiple hidden></label>
+      <p id="status" class="mut" role="status"></p>
+    </div>
+    <!-- APRENDER: mapa de dominio por tema -->
+    <div id="t-ap" class="tab" hidden><div id="x-ap"></div></div>
+    <!-- PROGRESO: evolución, hábitos y respaldo -->
+    <div id="t-pr" class="tab" hidden><div id="x-pr"></div>
+      <h2>Mi progreso (archivo)</h2>
+      <div class="row"><button class="btn" data-a="export">⬇️ Descargar</button><button class="btn" data-a="share" id="shareBtn">📤 Compartir</button><label class="btn">Restaurar desde archivo<input type="file" id="pimport" accept="application/json" hidden></label></div>
+      <p class="mut">El archivo lleva tu nombre. Tu avance vive solo en este navegador: descárgalo de vez en cuando o compártelo con quien te acompaña.</p>
+      <h2>Seguimiento de otras personas</h2>
+      <p class="mut">Pídeles su archivo de progreso y cárgalo aquí (puedes elegir varios a la vez) para ver cómo van, sin tocar tu propio avance.</p>
+      <label class="btn">👀 Cargar progreso de otra persona<input type="file" id="pfollow" accept="application/json" multiple hidden></label>
+      <div id="x-follow" style="margin-top:1rem"></div>
+    </div>
+  </section>
+  <!-- Vista previa editable / elección de modo -->
+  <section id="v-prev" class="view" hidden></section>
+  <!-- Vista 2: examen -->
+  <section id="v-who" class="view" hidden></section>
+  <section id="v-view" class="view" hidden></section>
+  <section id="v-gen" class="view" hidden></section>
+  <section id="v-learn" class="view" hidden></section>
+  <section id="v-exam" class="view" hidden></section>
+  <section id="v-ficha" class="view" hidden></section>
+  <!-- Vista 3: resultados -->
+  <section id="v-res" class="view" hidden></section>
+</main>
+<button id="sheetpeek" class="btn pri" hidden aria-label="Volver a abrir"></button>
+<div id="sheetwrap" hidden><div class="sheet-backdrop" data-sheet="close"></div><div class="sheet-bar" role="dialog" aria-modal="true" aria-labelledby="sheet-t"><b id="sheet-t"></b><button class="btn sm" id="sheet-x" data-sheet="close">✕ Cerrar</button></div></div>
+<div id="toast" class="toast" hidden role="status"></div>
+
+<dialog id="ask" aria-labelledby="ask-t" aria-describedby="ask-m"><form method="dialog" class="ed"><h2 id="ask-t">Confirmar</h2><p id="ask-m" class="mut"></p><div class="row ask-actions"><button class="btn" value="no" id="ask-no">Cancelar</button><button class="btn pri" value="ok" id="ask-ok">Aceptar</button></div></form></dialog>
+
+<dialog id="zoom" aria-label="Figura ampliada"><form method="dialog"><button class="btn sm" value="x" style="float:right">✕ Cerrar</button></form><img id="zoomimg" alt="Figura ampliada"></dialog>
+<dialog id="cfg">
+  <form method="dialog" class="ed">
+    <h2 style="margin-top:0">Tutor con IA</h2>
+    <p class="mut" style="margin:0">No uses tu clave en un archivo publicado en internet. Para Gemini directo en la app, pega tu clave gratuita de Google AI Studio. Se guarda solo en este navegador. ChatGPT gratis no tiene API: se abre con la pregunta copiada.</p>
+    <label>Clave API de Gemini<input id="gkey" type="password" autocomplete="off"></label>
+    <label>Modelo<input id="gmodel" placeholder="gemini-3.5-flash-lite"></label>
+    <div class="row"><button class="btn pri" data-a="saveCfg" value="ok">Guardar</button><button class="btn" value="x">Cerrar</button></div>
+  </form>
+</dialog>
+
+<script src="js/data/bank-2024.js"></script>
+<script src="js/data/bank-2025.js"></script>
+<script src="js/data/texts.js"></script>
+<script src="js/data/tips.js"></script>
+<script src="js/data/theory.js"></script>
+<script src="js/core/text-helpers.js"></script>
+<script src="js/core/state.js"></script>
+<script src="js/features/home-modes.js"></script>
+<script src="js/features/pdf-import.js"></script>
+<script src="js/features/exam-engine.js"></script>
+<script src="js/features/tutor-prompts.js"></script>
+<script src="js/render/markdown-math.js"></script>
+<script src="js/features/tutor.js"></script>
+<script src="js/features/results.js"></script>
+<script src="js/ui/events.js"></script>
+<script src="js/ui/bottom-sheet.js"></script>
+<script src="js/ui/swipe-and-listeners.js"></script>
+<script src="js/features/autosave-history.js"></script>
+<script src="js/features/attempts.js"></script>
+<script src="js/ui/shortcuts.js"></script>
+<script src="js/features/memory-learning.js"></script>
+<script src="js/features/exam-performance.js"></script>
+<script src="js/features/sprints-plan-backup.js"></script>
+<script src="js/features/gemini-plan-refuerzo.js"></script>
+<script src="js/features/practice-similar.js"></script>
+<script src="js/features/voice.js"></script>
+<script src="js/ui/tabs-home.js"></script>
+<script src="js/features/lessons.js"></script>
+<script src="js/features/ai-exam-generator.js"></script>
+<script src="js/features/solutions.js"></script>
+<script src="js/features/profiles-follow.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
