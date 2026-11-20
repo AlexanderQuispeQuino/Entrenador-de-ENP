@@ -53,12 +53,8 @@ async function askHint(){
   if (hit){ out.innerHTML = fmt(hit); return; }
   out.innerHTML = '<span class="think" role="status">Pensando</span>';
   try {
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${store.get('gmodel') || 'gemini-3.5-flash-lite'}:generateContent`, {
-      method:'POST', headers:{'Content-Type':'application/json','x-goog-api-key':key},
-      body:JSON.stringify({system_instruction:{parts:[{text:SYS_PISTA}]}, contents:[{role:'user', parts:[{text:prompt(S.i)}]}], generationConfig:{temperature:.3, maxOutputTokens:300}})});
-    if (r.status === 429){ fallback(); return; }
-    const j = await r.json(), t = j.candidates?.[0]?.content?.parts?.map(p => p.text).join('') || '';
+    const t = await geminiText(SYS_PISTA, prompt(S.i), {maxTokens:1024});
     const leak = q.a !== null && q.o[q.a].trim().length >= 4 && t.includes(q.o[q.a].trim());   // si la pista suelta la respuesta, se descarta
-    if (t && !leak){ out.innerHTML = fmt(t); store.set(ck, t); } else fallback();
+    if (t.trim() && !leak){ out.innerHTML = fmt(t); store.set(ck, t); } else fallback();
   } catch { fallback(); }
 }

@@ -37,20 +37,21 @@ const SYS_EX_L = `Eres autor de textos y preguntas de Competencia Lectora del ex
 const EX_GEN_SCHEMA = {type:'ARRAY', items:{type:'OBJECT', properties:{q:{type:'STRING'}, o:{type:'ARRAY', items:{type:'STRING'}}, a:{type:'INTEGER'}, r:{type:'STRING'}, t:{type:'STRING'}}, required:['q','o','a','r','t']}};
 const L_SCHEMA = {type:'OBJECT', properties:{texto:{type:'STRING'}, preguntas:EX_GEN_SCHEMA}, required:['texto', 'preguntas']}, INT_SCHEMA = {type:'ARRAY', items:{type:'INTEGER'}};
 const validExamQ = (x, topics) => validQ(x) && typeof x.t === 'string' && topics.includes(x.t) && x.q.trim().length >= 12 && x.r.trim().length >= 12 && new Set(x.o.map(o => o.trim().toLocaleLowerCase('es'))).size === 4;
-const genDelay = () => window.__GEN_DELAY ?? 7000;
+const genDelay = () => window.__GEN_DELAY ?? 4500;
 function genLog(m){ GEN.log.push(m); GEN.log = GEN.log.slice(-30); saveGenJob(); updateGen(); }
-/* Reintentos con espera creciente ante saturación temporal, errores 5xx o red inestable. */
-async function gem(sys, user, schema, temp){
+/* Una llamada a Gemini con reintentos largos ante saturación, cuota por minuto, red inestable o respuestas cortadas.
+   Los errores definitivos (clave inválida, cuota diaria) se propagan de inmediato con un mensaje claro. */
+async function gem(sys, user, schema, temp, opts){
   const maxAttempts = 5;
   for (let k = 0; k < maxAttempts; k++){
     if (GEN.stop) throw new Error('stop');
-    try { const r = await geminiJSON(sys, user, schema, temp); GEN.done++; saveGenJob(); updateGen(); await sleep(genDelay()); return r; }
+    try { const r = await geminiJSON(sys, user, schema, temp, opts); GEN.done++; saveGenJob(); updateGen(); await sleep(genDelay()); return r; }
     catch (e){
       if (GEN.stop) throw new Error('stop');
-      const transient = e.transient || e.status === 429 || e.status === 500 || e.status === 502 || e.status === 503 || e.status === 504;
-      if (!transient || k === maxAttempts - 1) throw e;
-      const wait = e.retryAfterMs || Math.min(60000, 10000 * (2 ** k));
-      const reason = e.status === 503 || /high demand|overload/i.test(e.message) ? 'Gemini está saturado (alta demanda)' : e.status === 429 ? 'Gemini está limitando temporalmente las consultas' : 'Conexión temporalmente inestable con Gemini';
+      if (!e.transient || e.fatal || e.daily || k === maxAttempts - 1) throw e;
+      const fmtErr = e.kind === 'format';
+      const wait = e.retryAfterMs || (fmtErr ? 2500 : Math.min(60000, 8000 * (2 ** k)));
+      const reason = e.status === 503 || /high demand|overload/i.test(e.message) ? 'Gemini está saturado' : e.status === 429 ? 'Gemini limitó las consultas por un momento' : fmtErr ? 'Gemini devolvió una respuesta incompleta' : e.kind === 'network' ? 'Conexión inestable con Gemini' : 'Gemini no respondió bien';
       genLog(`${reason}. Reintento ${k + 1}/${maxAttempts - 1} en ${Math.ceil(wait / 1000)} s…`);
       await sleep(wait);
     }
@@ -59,40 +60,68 @@ async function gem(sys, user, schema, temp){
 }
 const fmtQx = q => q.q + '\n' + q.o.map((o, j) => L[j] + ') ' + o).join('\n');
 const shuffleQ = x => { const idx = [0, 1, 2, 3].sort(() => Math.random() - .5); return {...x, o:idx.map(i => x.o[i]), a:idx.indexOf(x.a)}; };
-async function genMath(batch){
-  const need = Object.fromEntries(batch.map(x => [x.t, x.n])), got = [];
-  for (let round = 0; round < 3 && Object.values(need).some(n => n > 0); round++){
+const _norm = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+const matchTopic = (t, list) => { const n = _norm(t); if (!n) return null; return list.find(x => _norm(x) === n) || list.find(x => { const m = _norm(x); return m.startsWith(n) || n.startsWith(m); }) || null; };
+/* Similitud con el banco más tolerante que la del ejercicio parecido: evita descartar preguntas válidas solo por compartir cifras pequeñas o palabras comunes */
+const _numsEx = s => new Set((String(s).match(/\d+(?:[.,]\d+)?/g) || []).filter(n => n.length >= 2 || /[.,]/.test(n)));
+const tooCloseExam = (x, refs) => { const N = _numsEx(x.q); return refs.some(r => { if (_simil(x.q, r) > .72) return true; if (N.size < 3) return false; const R = _numsEx(r); let n = 0; N.forEach(v => R.has(v) && n++); return n / N.size >= .8; }); };
+const examRefs = () => Object.values(BANK).filter(e => !e.ia).flatMap(e => e.qs.map(q => q.q));
+/* Cuántas preguntas de matemática faltan por tema (según el plano y lo ya validado) */
+const mathNeed = job => { const need = Object.fromEntries(job.bp.m.map(x => [x.t, x.n])); (job.math || []).forEach(q => { if (need[q.t] > 0) need[q.t]--; }); return need; };
+/* Matemática: cada pregunta se valida y se GUARDA al momento. Un fallo parcial ya no pierde lo avanzado. */
+async function genMath(job){
+  const refsBase = examRefs(); let stalls = 0;
+  for (let round = 0; round < 24; round++){
     if (GEN.stop) throw new Error('stop');
-    const list = Object.entries(need).filter(([, n]) => n > 0), total = list.reduce((a, [, n]) => a + n, 0);
-    genLog(`Matemática: creando ${total} preguntas${round ? ` (intento ${round + 1}/3)` : ''}…`);
-    const guia = list.map(([t]) => `- ${t}: ${(THEORY[t] && THEORY[t].regla) || ''}`).join('\n');
-    const raw = await gem(SYS_EX, `Genera exactamente ${total} preguntas nuevas. Distribución exacta (no cambies los nombres):\n${list.map(([t, n]) => `- ${t}: ${n}`).join('\n')}\nCada pregunta debe llevar el campo t con uno de esos nombres. No agregues preguntas de otros temas.\n\nGuía conceptual de cada tema (no hay ejemplos que copiar):\n${guia}\nLas preguntas deben ser 100 % originales: no reproduzcas ni imites preguntas de exámenes oficiales.`, EX_GEN_SCHEMA, .45);
-    if (!Array.isArray(raw)) continue;
-    const refs = Object.values(BANK).filter(e => !e.ia).flatMap(e => e.qs.map(q => q.q)).concat(((GEN.job && GEN.job.math) || []).map(q => q.q), got.map(q => q.q));
-    const cap = {...need}, cand = raw.filter(x => validExamQ(x, list.map(([t]) => t)) && !tooClose(x, refs) && cap[x.t] > 0 && cap[x.t]--);
-    if (!cand.length) continue;
+    const need = mathNeed(job), list = Object.entries(need).filter(([, n]) => n > 0); if (!list.length) return;
+    const chunk = []; let tot = 0; for (const [t, n] of list){ const k = Math.min(n, 8 - tot); if (k <= 0) break; chunk.push([t, k]); tot += k; }
+    const topics = chunk.map(([t]) => t), have = (job.math || []).length;
+    genLog(`Matemática: ${have}/30 listas · creando ${tot} más…`);
+    const guia = chunk.map(([t]) => `- ${t}: ${(THEORY[t] && THEORY[t].regla) || ''}`).join('\n');
+    const raw = await gem(SYS_EX, `Genera exactamente ${tot} preguntas nuevas. Distribución exacta (no cambies los nombres):\n${chunk.map(([t, n]) => `- ${t}: ${n}`).join('\n')}\nCada pregunta debe llevar el campo t con uno de esos nombres. No agregues preguntas de otros temas.\n\nGuía conceptual de cada tema (no hay ejemplos que copiar):\n${guia}\nCalcula primero cada problema y comprueba que el resultado esté entre las alternativas. Las preguntas deben ser 100 % originales: no reproduzcas ni imites preguntas de exámenes oficiales.`, EX_GEN_SCHEMA, .45, {think:'low'});
+    const refs = refsBase.concat((job.math || []).map(q => q.q)), cap = Object.fromEntries(chunk), seen = [];
+    const cand = (Array.isArray(raw) ? raw : []).map(x => x && typeof x === 'object' ? {...x, t:matchTopic(x.t, topics)} : x)
+      .filter(x => x && x.t && validExamQ(x, topics) && !tooCloseExam(x, refs.concat(seen)) && cap[x.t] > 0 && (cap[x.t]--, seen.push(x.q), true));
+    if (!cand.length){ if (++stalls >= 4) break; genLog('Ninguna pregunta pasó los filtros; vuelvo a intentarlo…'); continue; }
     genLog('Matemática: contrastando las respuestas…');
-    const sol = await gem(SYS_SOLVE, `Resuelve de forma independiente. Devuelve un número por pregunta.\n${cand.map((x, i) => `Pregunta ${i + 1}: ${fmtQx(x)}`).join('\n\n')}`, INT_SCHEMA, 0);
-    if (!Array.isArray(sol)) continue;
-    cand.forEach((x, i) => { if (Number.isInteger(sol[i]) && sol[i] === x.a && need[x.t] > 0){ need[x.t]--; got.push(x); } });
+    const sol = await gem(SYS_SOLVE, `Resuelve cada pregunta de forma independiente, calculando con cuidado. Devuelve un número por pregunta, en orden.\n${cand.map((x, i) => `Pregunta ${i + 1}: ${fmtQx(x)}`).join('\n\n')}`, INT_SCHEMA, 0, {think:'medium', maxTokens:8192});
+    let ok = 0;
+    cand.forEach((x, i) => { if (Array.isArray(sol) && Number.isInteger(sol[i]) && sol[i] === x.a && mathNeed(job)[x.t] > 0){ job.math.push(x); ok++; } });
+    saveGenJob(); updateGen();
+    if (ok) stalls = 0; else if (++stalls >= 4) break;
   }
-  const missing = Object.entries(need).filter(([, n]) => n > 0);
-  if (missing.length) throw new Error(`No se pudieron validar todas las preguntas de Matemática. Faltan ${missing.reduce((a, [, n]) => a+n, 0)} en: ${missing.map(([t,n]) => `${t} (${n})`).join(', ')}`);
-  return got;
+  const miss = Object.entries(mathNeed(job)).filter(([, n]) => n > 0);
+  if (miss.length) throw new Error(`No se pudieron validar todas las preguntas de Matemática (${job.math.length}/30 listas). Faltan: ${miss.map(([t, n]) => `${t} (${n})`).join(', ')}. Lo validado se conserva: toca «Intentar de nuevo».`);
 }
+/* Lectura: un texto con 5 preguntas. Si alguna no se valida, se piden SOLO las que faltan sobre el mismo texto. */
 async function genGroup(topics, genre, n){
-  for (let tries = 0; tries < 3; tries++){
+  let texto = null; const got = Array(5).fill(null);
+  for (let round = 0; round < 5; round++){
     if (GEN.stop) throw new Error('stop');
-    genLog(`Lectura ${n} de 6: creando ${genre.split(' (')[0].toLowerCase()} (intento ${tries + 1}/3)…`);
-    const out = await gem(SYS_EX_L, `Género: ${genre}.\nEscribe un texto original de 110–160 palabras y EXACTAMENTE 5 preguntas. Sus campos t, en orden, deben ser exactamente:\n${topics.map((t,i) => `${i+1}. ${t}`).join('\n')}\nNo cambies, repitas ni omitas los tipos. Cada pregunta debe incluir 4 opciones, una clave a entre 0 y 3 y resolución.\n\nGuía de cada tipo: ${topics.map(t => t + ': ' + ((THEORY[t] && THEORY[t].regla) || '')).join(' | ')}\nTexto y preguntas 100 % originales, sin reproducir material de exámenes oficiales.`, L_SCHEMA, .45);
-    const qs = Array.isArray(out?.preguntas) ? out.preguntas : [];
-    if (typeof out?.texto !== 'string' || out.texto.trim().length < 200 || qs.length !== 5 || !qs.every((x,i) => validExamQ(x, [topics[i]]) && x.t === topics[i])) continue;
-    genLog(`Lectura ${n} de 6: contrastando las 5 respuestas…`);
-    const sol = await gem(SYS_SOLVE, `Usa el texto para resolver las preguntas. Devuelve exactamente 5 índices, en orden.\nTexto:\n${out.texto}\n\n${qs.map((x, i) => `Pregunta ${i + 1}: ${fmtQx(x)}`).join('\n\n')}`, INT_SCHEMA, 0);
-    if (Array.isArray(sol) && sol.length === 5 && qs.every((x,i) => sol[i] === x.a)) return {texto:out.texto, qs};
+    const miss = got.map((x, i) => x ? -1 : i).filter(i => i >= 0); if (!miss.length) break;
+    genLog(`Lectura ${n} de 6: ${texto ? `reponiendo ${miss.length} pregunta(s)` : 'creando ' + genre.split(' (')[0].toLowerCase()}${round ? ` (intento ${round + 1}/5)` : ''}…`);
+    let raw;
+    if (!texto){
+      const out = await gem(SYS_EX_L, `Género: ${genre}.\nEscribe un texto original de 110–160 palabras con párrafos numerados y EXACTAMENTE 5 preguntas. Sus campos t, en orden, deben ser exactamente:\n${topics.map((t, i) => `${i + 1}. ${t}`).join('\n')}\nNo cambies, repitas ni omitas los tipos. Cada pregunta debe incluir 4 opciones distintas, una clave a entre 0 y 3 y resolución.\n\nGuía de cada tipo: ${topics.map(t => t + ': ' + ((THEORY[t] && THEORY[t].regla) || '')).join(' | ')}\nTexto y preguntas 100 % originales, sin reproducir material de exámenes oficiales.`, L_SCHEMA, .45, {think:'low'});
+      if (typeof out?.texto !== 'string' || out.texto.trim().length < 200) continue;
+      texto = out.texto; raw = Array.isArray(out.preguntas) ? out.preguntas : [];
+      // Si llegan 5, el tipo se asigna por posición (la etiqueta t es solo un rótulo y la IA a veces la cambia).
+      raw = raw.length === 5 ? raw.map((x, i) => ({...x, t:topics[i], _i:i})) : raw.map(x => { const t = matchTopic(x && x.t, topics), i = got.findIndex((g, k) => !g && topics[k] === t); return {...x, t, _i:i}; });
+    } else {
+      const out = await gem(SYS_EX_FILL, `Texto:\n${texto}\n\nCrea EXACTAMENTE ${miss.length} pregunta(s) nueva(s) basadas SOLO en este texto, en este orden y con estos tipos (campo t exacto):\n${miss.map((i, k) => `${k + 1}. ${topics[i]} — ${(THEORY[topics[i]] && THEORY[topics[i]].regla) || ''}`).join('\n')}\nDeben ser distintas entre sí. Cada una con 4 alternativas distintas, clave a (0 a 3) y resolución r.`, EX_GEN_SCHEMA, .5, {think:'low'});
+      raw = Array.isArray(out) ? out : [];
+      raw = raw.length === miss.length ? raw.map((x, k) => ({...x, t:topics[miss[k]], _i:miss[k]})) : raw.map(x => { const t = matchTopic(x && x.t, miss.map(i => topics[i])); return {...x, t, _i:miss.find(i => topics[i] === t && !raw.some(y => y !== x && y._i === i))}; });
+    }
+    const cand = raw.filter(x => x && Number.isInteger(x._i) && x._i >= 0 && !got[x._i] && validExamQ(x, [topics[x._i]]));
+    const uniq = []; cand.forEach(x => { if (!uniq.some(y => y._i === x._i)) uniq.push(x); });
+    if (!uniq.length || !texto) continue;
+    genLog(`Lectura ${n} de 6: contrastando ${uniq.length} respuesta(s)…`);
+    const sol = await gem(SYS_SOLVE, `Usa el texto para resolver las preguntas con cuidado. Devuelve exactamente ${uniq.length} índice(s), en orden.\nTexto:\n${texto}\n\n${uniq.map((x, i) => `Pregunta ${i + 1}: ${fmtQx(x)}`).join('\n\n')}`, INT_SCHEMA, 0, {think:'medium', maxTokens:8192});
+    uniq.forEach((x, i) => { if (Array.isArray(sol) && sol[i] === x.a){ const {_i, ...q} = x; got[_i] = q; } });
   }
-  return null;
+  return texto && got.every(Boolean) ? {texto, qs:got} : null;
 }
+const SYS_EX_FILL = `Eres autor de preguntas de Competencia Lectora del examen ENP de Beca 18 (Perú), nivel secundaria. Recibes un texto y los tipos de pregunta que faltan. Crea EXACTAMENTE esa cantidad de preguntas NUEVAS basadas solo en el texto, en el orden indicado y con el campo t igual al tipo pedido. Cada pregunta: enunciado claro, EXACTAMENTE 4 alternativas distintas y no vacías, un único índice correcto a (entero 0–3) y resolución r de 2 a 3 líneas que justifique la respuesta con el texto. Sin «todas las anteriores». Español claro, sin LaTeX ni $.`;
 const textHTML = (texto, genre) => `<h4>${esc(genre.split(' (')[0])} · texto generado por IA</h4>` + texto.split(/\n+/).filter(x => x.trim()).map(x => `<p>${esc(x.trim())}</p>`).join('');
 function genConfig(){
   if (!store.get('gkey')){ toast('Para generar un examen con IA, guarda tu clave gratuita de Gemini en ⚙ IA.'); return; }
@@ -138,11 +167,7 @@ async function reanudarGeneracion(silent){
 async function runGenJob(job){
   wake(true);
   try {
-    for (let i = job.batchIndex || 0; i < job.batches.length; i++){
-      if (GEN.stop) throw new Error('stop');
-      genLog(`Matemática: bloque ${i+1} de ${job.batches.length}…`);
-      const part = await genMath(job.batches[i]); job.math = (job.math || []).concat(part); job.batchIndex = i+1; saveGenJob(); updateGen();
-    }
+    if (mathNeed(job) && Object.values(mathNeed(job)).some(n => n > 0)) await genMath(job);
     for (let g = 0; g < 6; g++){
       if (GEN.stop) throw new Error('stop'); if (job.readings[g]) continue;
       const r = await genGroup(job.groups[g], GENRES[g], g+1);
@@ -167,8 +192,11 @@ async function runGenJob(job){
       $('v-gen').innerHTML = `<h1>Generación pausada</h1><p class="mut">El avance verificado está guardado. Puedes continuar cuando quieras desde «Exámenes» → «Generar».</p><div class="row"><button class="btn pri" data-a="genresume">Continuar</button><button class="btn" data-a="toex">Salir</button></div>`;
       return;
     }
-    const friendly = e.status===503 || /high demand|overload|GEMINI_TEMPORARY/i.test(msg) ? 'Gemini está experimentando alta demanda. Tu avance verificado quedó guardado; vuelve a intentarlo más tarde.' : e.status===429 || msg==='429' ? 'Gemini alcanzó temporalmente un límite. Tu avance está guardado; espera unos minutos y reanuda.' : e.status>=500 || /GEMINI_NETWORK/i.test(msg) ? 'Hubo un problema de conexión. Tu avance está guardado; revisa internet y reanuda.' : esc(msg || 'No se pudo completar el examen. Tu avance verificado se conserva.');
-    $('v-gen').innerHTML = `<h1>No pude completar el examen todavía</h1><p class="mut">${friendly}</p><p>Toca «Intentar de nuevo»: lo que ya se verificó se conserva y solo se genera lo que falta.</p><div class="card gen-progress"><b>Avance conservado</b><p class="mut">${job.math.length}/30 Matemática · ${job.readings.filter(Boolean).length*5}/30 Comprensión Lectora</p><div class="row"><button class="btn pri" data-a="genresume">🔄 Intentar de nuevo</button><button class="btn" data-a="gendiscard">Descartar avance</button></div></div>`;
+    const known = e.status || e.fatal || e.daily || e.kind || /GEMINI_/.test(msg);
+    const friendly = known ? esc(geminiErrText(e)) : esc(msg || 'No se pudo completar el examen.');
+    const canRetry = !(e.fatal) ;
+    const detail = msg && !/^stop$/.test(msg) ? `<details class="mut" style="margin:.4rem 0"><summary>Detalle técnico</summary><p style="overflow-wrap:anywhere">${esc(msg)}</p></details>` : '';
+    $('v-gen').innerHTML = `<h1>No pude completar el examen todavía</h1><p class="mut">${friendly}</p>${detail}<p>Lo que ya se verificó queda guardado y solo se genera lo que falta.</p><div class="card gen-progress"><b>Avance conservado</b><p class="mut">${job.math.length}/30 Matemática · ${job.readings.filter(Boolean).length*5}/30 Comprensión Lectora</p><div class="row">${canRetry ? '<button class="btn pri" data-a="genresume">🔄 Intentar de nuevo</button>' : '<button class="btn pri" data-a="cfg">⚙ Revisar mi clave y modelo</button>'}<button class="btn" data-a="gendiscard">Descartar avance</button></div></div>`;
   }
 }
 async function descartarGeneracion(){ if (GEN.running){ if (!await ask('La generación se detendrá. ¿También quieres descartar todo el avance guardado?')) return; GEN.discard = true; GEN.stop = true; toast('Deteniendo la generación y descartando el avance…'); return; } if (!await ask('¿Descartar todo el avance guardado?')) return; clearGenJob(); toast('Se descartó el avance de generación.'); genConfig(); }

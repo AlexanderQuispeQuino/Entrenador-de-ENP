@@ -57,10 +57,7 @@ async function lessonAI(){
   const ck = 'teo:' + hash(data + modelId()), hit = store.get(ck); if (hit){ out.innerHTML = fmt(hit); return; }
   out.innerHTML = '<span class="think" role="status">Preparando otra explicación</span>';
   try {
-    const r = await fetch(geminiURL(), {method:'POST', headers:{'Content-Type':'application/json', 'x-goog-api-key':key},
-      body:JSON.stringify({system_instruction:{parts:[{text:SYS_TEORIA}]}, contents:[{role:'user', parts:[{text:data}]}], generationConfig:{temperature:.4, maxOutputTokens:600}})});
-    if (r.status === 429){ out.textContent = 'Llegaste al límite gratuito de Gemini. Espera un momento e inténtalo otra vez.'; return; }
-    const j = await r.json(), t = j.candidates?.[0]?.content?.parts?.map(p => p.text).join('') || '';
-    if (t){ out.innerHTML = fmt(t); store.set(ck, t); } else out.textContent = j.error?.message || 'Sin respuesta.';
-  } catch { out.textContent = 'No se pudo conectar. Revisa tu internet.'; }
+    const t = await geminiText(SYS_TEORIA, data, {maxTokens:2048});
+    out.innerHTML = fmt(t); store.set(ck, t);
+  } catch (e) { out.textContent = geminiErrText(e); }
 }

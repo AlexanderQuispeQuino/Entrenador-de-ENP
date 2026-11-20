@@ -29,10 +29,13 @@ async function solOne(q){
   const user = `${txt}${fg}${q.alt ? 'Figura: ' + q.alt + '\n\n' : ''}Pregunta: ${q.q}\n${q.o.map((o, j) => L[j] + ') ' + o).join('\n')}\n\nClave oficial: ${L[q.a]}) ${q.o[q.a]}\nResolución oficial: ${q.r || '(no disponible)'}\nTema: ${q.t}.\nEscribe la clase completa con la estructura indicada; la respuesta correcta es la alternativa ${L[q.a]}.`;
   for (let k = 0; k < 4 && !SOL.stop; k++){
     try {
-      const r = await fetch(geminiURL(), {method:'POST', headers:{'Content-Type':'application/json', 'x-goog-api-key':store.get('gkey')}, body:JSON.stringify({system_instruction:{parts:[{text:SYS_SOL}]}, contents:[{role:'user', parts:[{text:user}]}], generationConfig:{temperature:.3, maxOutputTokens:5000}})});
-      if (r.status === 429 || r.status >= 500){ await sleep(10000 * (k + 1)); continue; }
-      const t = (await r.json()).candidates?.[0]?.content?.parts?.map(x => x.text).join('') || ''; if (t.trim()) return t;
-    } catch { await sleep(8000); }
+      const t = (await geminiRaw(SYS_SOL, user, {think:'low', maxTokens:12000, timeout:150000})).text;
+      if (t.trim()) return t;
+    } catch (e) {
+      SOL.err = e;
+      if (e.fatal || e.daily) return null;
+      await sleep(e.retryAfterMs || 8000 * (k + 1));
+    }
   }
   return null;
 }
@@ -50,9 +53,9 @@ async function genSol(){
   SOL.run = true; SOL.stop = false; refreshSol();
   for (const q of solTargets()){
     if (SOL.stop) break; if (solGood(q.id)) continue;
-    const t = await solOne(q); if (t){ store.set('sol2:' + q.id, t); refreshSol(); await sleep(genDelay()); }
+    const t = await solOne(q); if (t){ store.set('sol2:' + q.id, t); refreshSol(); await sleep(genDelay()); } else if (SOL.err && (SOL.err.fatal || SOL.err.daily)) break;
   }
-  const paused = SOL.stop; SOL.run = false; refreshSol();
-  toast(paused ? 'Generación en pausa.' : (solTargets().every(q => solGood(q.id)) ? '✅ Las soluciones están listas.' : 'Terminó, pero algunas no se pudieron completar: toca «Continuar».'));
+  const paused = SOL.stop, err = SOL.err; SOL.err = null; SOL.run = false; refreshSol();
+  toast(paused ? 'Generación en pausa.' : (err && (err.fatal || err.daily)) ? geminiErrText(err) : (solTargets().every(q => solGood(q.id)) ? '✅ Las soluciones están listas.' : 'Terminó, pero algunas no se pudieron completar: toca «Continuar».'));
 }
 registerIA(); renderBank();

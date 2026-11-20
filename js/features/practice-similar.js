@@ -4,12 +4,13 @@
    La dificultad se adapta: acertar → un poco más difícil; fallar → un poco más sencillo. */
 const GEN_SCHEMA = {type:'ARRAY', items:{type:'OBJECT', properties:{q:{type:'STRING'}, o:{type:'ARRAY', items:{type:'STRING'}}, a:{type:'INTEGER'}, r:{type:'STRING'}}, required:['q', 'o', 'a', 'r']}};
 const cleanOption = o => String(o ?? '').trim().replace(/^\s*(?:alternativa\s*)?[A-D]\s*[).:\-–—]\s*/i, '').trim();
-const BADRES = /(espera[,.:]|recalcul|revisemos|vamos a ajustar|cambiemos el|ajustemos|no est[aá] en (?:la|las|ninguna)|hmm|me equivoqu|corrijo|corrigiendo|en realidad|mejor dicho|probemos con|intentemos|no coincide con (?:ninguna|las))/i;
+const BADRES = /(espera[,.:]|recalcul|revisemos|vamos a ajustar|cambiemos el|ajustemos|no est[aá] en (?:la|las|ninguna)|hmm|me equivoqu|corrijo|corrigiendo|probemos con|intentemos|no coincide con (?:ninguna|las))/i;
+const BADQ = /(espera[,.:]|recalcul|hmm|me equivoqu|corrijo)/i;
 const validQ = x => {
   if (!x || typeof x.q !== 'string' || !Array.isArray(x.o) || x.o.length !== 4 || !Number.isInteger(x.a) || x.a < 0 || x.a > 3 || typeof x.r !== 'string') return false;
   // Gemini puede incluir A), B), C) o D) dentro del texto; la interfaz ya añade esas letras.
   x.o = x.o.map(cleanOption);
-  if (BADRES.test(x.r) || BADRES.test(x.q)) return false;
+  if (BADRES.test(x.r) || BADQ.test(x.q)) return false;
   return x.o.every(o => o.length > 0) && new Set(x.o.map(o => o.toLocaleLowerCase('es'))).size === 4;
 };
 const CONTEXTOS = ['una tienda o mercado','un colegio','un deporte o competencia','transporte y viajes','cocina y recetas','ahorro y préstamos','campo y agricultura','tecnología y celulares','salud y alimentación','construcción y medidas','naturaleza y medio ambiente','una feria o evento','juegos y concursos','una ciudad o mapa'];
@@ -27,14 +28,14 @@ async function pracGen(i){
   const ejemplo = (q0.tx ? 'Texto: ' + qText(q0).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 700) + '\n' : '') + q0.q + '\n' + q0.o.map((o, j) => L[j] + ') ' + o).join('\n');
   try {
     const ctx = CONTEXTOS[Math.floor(Math.random() * CONTEXTOS.length)], vistos = P.seen.slice(1);
-    const cand = (await geminiJSON(SYS_GEN, `Tema: ${q0.t}.\nCrea 3 preguntas nuevas, ${nivel} que el ejemplo, que practiquen la MISMA habilidad o concepto pero con OTROS DATOS: otro contexto (por ejemplo: ${ctx}), otros personajes, OTRAS CIFRAS y otra redacción; si puedes, cambia también lo que se pide hallar. No repitas el escenario, las cifras ni la estructura del enunciado. Las tres preguntas deben ser distintas entre sí.\n\nEjemplo (NO lo copies):\n${ejemplo}${vistos.length ? '\n\nEnunciados ya usados (evítalos):\n' + vistos.map(s => '- ' + s).join('\n') : ''}`, GEN_SCHEMA, .9)).filter(validQ).filter(x => !tooClose(x, P.seen));
+    const cand = (await geminiJSONRetry(SYS_GEN, `Tema: ${q0.t}.\nCrea 3 preguntas nuevas, ${nivel} que el ejemplo, que practiquen la MISMA habilidad o concepto pero con OTROS DATOS: otro contexto (por ejemplo: ${ctx}), otros personajes, OTRAS CIFRAS y otra redacción; si puedes, cambia también lo que se pide hallar. No repitas el escenario, las cifras ni la estructura del enunciado. Las tres preguntas deben ser distintas entre sí.\n\nEjemplo (NO lo copies):\n${ejemplo}${vistos.length ? '\n\nEnunciados ya usados (evítalos):\n' + vistos.map(s => '- ' + s).join('\n') : ''}`, GEN_SCHEMA, .9, {think:'low'})).filter(validQ).filter(x => !tooClose(x, P.seen));
     if (!cand.length) throw new Error('pocas');
-    const sol = await geminiJSON(SYS_SOLVE, cand.map((x, k) => `Pregunta ${k + 1}: ${x.q}\n` + x.o.map((o, j) => L[j] + ') ' + o).join('\n')).join('\n\n'), {type:'ARRAY', items:{type:'INTEGER'}}, 0);
+    const sol = await geminiJSONRetry(SYS_SOLVE, cand.map((x, k) => `Pregunta ${k + 1}: ${x.q}\n` + x.o.map((o, j) => L[j] + ') ' + o).join('\n')).join('\n\n'), {type:'ARRAY', items:{type:'INTEGER'}}, 0, {think:'medium', maxTokens:8192});
     const good = cand.find((x, k) => sol[k] === x.a); if (!good) throw new Error('no verificada');
     P.seen.push(good.q); P.cur = {...good, picked:null}; renderPrac(i);
   } catch (e) {
-    const lim = e.status === 429 || /429/.test(e.message || '');
-    box.innerHTML = `<p class="mut">${lim ? 'Llegaste al límite gratuito de Gemini. Espera un momento y vuelve a generar.' : 'La IA no logró crear un ejercicio confiable esta vez.'}</p><div class="row"><button class="btn pri" data-a="pracnext" data-v="${i}">🔄 Generar de nuevo</button><button class="btn" data-a="pracclose" data-v="${i}">Cerrar</button></div>`; }
+    const lim = e.status === 429 || /429/.test(e.message || ''), msg = geminiErrText(e);
+    box.innerHTML = `<p class="mut">${lim || (e.status || e.fatal || e.kind) ? esc(msg) : 'La IA no logró crear un ejercicio confiable esta vez.'}</p><div class="row"><button class="btn pri" data-a="pracnext" data-v="${i}">🔄 Generar de nuevo</button><button class="btn" data-a="pracclose" data-v="${i}">Cerrar</button></div>`; }
 }
 function renderPrac(i){
   const P = S.prac[i], box = $('pr' + i); if (!P?.cur || !box) return;

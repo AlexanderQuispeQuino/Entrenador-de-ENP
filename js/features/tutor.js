@@ -7,13 +7,9 @@ async function askGemini(i){
   if (hit){ out.innerHTML = fmt(hit); return; }
   out.innerHTML = '<span class="think" role="status">Pensando</span>';
   try {
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${store.get('gmodel') || 'gemini-3.5-flash-lite'}:generateContent`, {
-      method:'POST', headers:{'Content-Type':'application/json','x-goog-api-key':key},
-      body:JSON.stringify({system_instruction:{parts:[{text:SYS}]}, contents:[{role:'user', parts:[{text:prompt(i)}]}], generationConfig:{temperature:0.3, maxOutputTokens:1400}})});
-    if (r.status === 429){ out.textContent = 'Llegaste al límite gratuito de Gemini (por minuto o por día). Espera un momento o usa «Abrir Gemini» / «Abrir ChatGPT».'; return; }
-    const j = await r.json(), txt2 = j.candidates?.[0]?.content?.parts?.map(p => p.text).join('');
-    if (txt2){ out.innerHTML = fmt(txt2); store.set(ck, txt2); } else out.textContent = j.error?.message || 'Sin respuesta.';
-  } catch { out.textContent = 'No se pudo conectar. Revisa tu internet o usa "Abrir Gemini".'; }
+    const t = await geminiText(SYS, prompt(i), {think:'low', maxTokens:4096});
+    out.innerHTML = fmt(t); store.set(ck, t);
+  } catch (e) { out.textContent = geminiErrText(e) + (e && (e.transient || e.daily || e.status === 429) ? ' También puedes usar «Abrir Gemini» o «Abrir ChatGPT».' : ''); }
 }
 async function openWeb(v){
   const [i, who] = v.split('|'), out = $('ai' + i); out.hidden = false;
